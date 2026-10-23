@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🧠 Упражнения на память</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background: linear-gradient(to bottom,
+                    #87CEEB 0%,
+                    #B0E0E6 40%,
+                    #E0F6FF 70%,
+                    #98D982 100%);
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            padding: 40px 40px 0 0;
+            background: transparent;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            min-width: 100%;
+            height: 100%;
+            width: auto;
+            display: block;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            border: none;
+            outline: none;
+        }
+
+        .hint-text {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: rgba(255, 255, 240, 0.95);
+            font-size: 18px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+            z-index: 2;
+        }
+
+        .frame {
+            width: calc(30% + 230px);
+            height: calc(100vh - 40px);
+            background: #F5F0E1;
+            flex-shrink: 0;
+            position: relative;
+            overflow-y: auto;
+            padding: 20px;
+            border: 3px solid #8B4513;
+            border-radius: 12px;
+        }
+
+        .exercise {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .exercise.active {
+            display: flex;
+        }
+
+        .exercise-title {
+            color: #DC143C;
+            font-size: clamp(22px, 3vw, 36px);
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .instruction {
+            background: #FFF8DC;
+            border: 2px solid #D2691E;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: clamp(14px, 1.5vw, 18px);
+            font-weight: 600;
+            color: #333;
+            text-align: center;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .show-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 160px;
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-size: 10em;
+            transition: all 0.3s ease;
+        }
+
+        .show-area .emoji-display {
+            animation: popIn 0.5s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .grid {
+            display: grid;
+            gap: 4px;
+            background: #8B4513;
+            padding: 6px;
+            border-radius: 10px;
+            margin: 0 auto 16px;
+            width: 100%;
+            max-width: 520px;
+            aspect-ratio: 1;
+        }
+
+        .grid-cell {
+            background: #FFF8DC;
+            border: 2px solid #A0522D;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: clamp(2em, 3.5vw, 3.4em);
+            user-select: none;
+        }
+
+        .grid-cell:hover {
+            background: #FFE4B5;
+            transform: scale(1.03);
+        }
+
+        .grid-cell.selected {
+            border: 4px solid #006400;
+            background: #E0FFE0;
+            box-shadow: 0 0 8px rgba(0, 100, 0, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: auto;
+            padding-top: 12px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            font-size: clamp(14px, 1.6vw, 18px);
+            font-weight: 700;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: Arial, sans-serif;
+            min-width: 140px;
+        }
+
+        .btn-check {
+            background: #2E8B57;
+            color: white;
+        }
+
+        .btn-check:hover {
+            background: #246B45;
+            transform: translateY(-2px);
+        }
+
+        .btn-next {
+            background: #4169E1;
+            color: white;
+        }
+
+        .btn-next:hover {
+            background: #3158C0;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #999;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            text-align: center;
+            font-size: clamp(16px, 2vw, 22px);
+            font-weight: 700;
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 10px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result.success {
+            background: #D4EDDA;
+            color: #155724;
+            border: 2px solid #28A745;
+        }
+
+        .result.error {
+            background: #F8D7DA;
+            color: #721C24;
+            border: 2px solid #DC3545;
+        }
+
+        .progress-indicator {
+            text-align: center;
+            font-size: clamp(14px, 1.4vw, 16px);
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .final-screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #finalCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .final-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .final-title {
+            color: #DC143C;
+            font-size: clamp(28px, 4vw, 52px);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            line-height: 1.3;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.15);
+            margin-bottom: 20px;
+        }
+
+        .final-subtitle {
+            font-size: clamp(18px, 2.2vw, 26px);
+            font-weight: 700;
+            margin-bottom: 30px;
+            padding: 16px 24px;
+            border-radius: 14px;
+            line-height: 1.4;
+            max-width: 90%;
+        }
+
+        .final-subtitle.success {
+            color: #155724;
+            background: #D4EDDA;
+            border: 2px solid #28A745;
+        }
+
+        .final-subtitle.error {
+            color: #721C24;
+            background: #F8D7DA;
+            border: 2px solid #DC3545;
+        }
+
+        .btn-restart {
+            background: #FF8500;
+            color: white;
+            padding: 14px 32px;
+            font-size: clamp(16px, 1.8vw, 22px);
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(255, 133, 0, 0.4);
+        }
+
+        .btn-restart:hover {
+            background: #E07500;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(255, 133, 0, 0.5);
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                padding: 20px 20px 0 0;
+            }
+            .frame {
+                width: calc(35% + 180px);
+                padding: 16px;
+            }
+            .show-area {
+                font-size: 8em;
+                min-height: 130px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            html, body {
+                overflow: auto;
+            }
+            .container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+                padding: 10px;
+            }
+            .canvas-wrapper {
+                height: 45vh;
+                min-height: 280px;
+            }
+            .frame {
+                width: 100%;
+                height: auto;
+                min-height: 55vh;
+                margin-top: 10px;
+            }
+            .show-area {
+                font-size: 7em;
+                min-height: 120px;
+            }
+            .grid {
+                max-width: 400px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 5px;
+            }
+            .canvas-wrapper {
+                height: 40vh;
+                min-height: 220px;
+            }
+            .frame {
+                padding: 10px;
+            }
+            .exercise-title {
+                font-size: 22px;
+            }
+            .instruction {
+                font-size: 13px;
+                padding: 8px 10px;
+            }
+            .show-area {
+                font-size: 6em;
+                min-height: 100px;
+            }
+            .grid {
+                gap: 3px;
+                padding: 4px;
+                max-width: 320px;
+            }
+            .grid-cell {
+                font-size: 1.8em;
+            }
+            .btn {
+                padding: 10px 16px;
+                min-width: 110px;
+                font-size: 14px;
+            }
+            .controls {
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .exercise-title {
+                font-size: 18px;
+            }
+            .instruction {
+                font-size: 12px;
+            }
+            .show-area {
+                font-size: 5em;
+                min-height: 80px;
+            }
+            .grid-cell {
+                font-size: 1.5em;
+            }
+            .btn {
+                padding: 8px 12px;
+                min-width: 90px;
+                font-size: 12px;
+            }
+            .final-title {
+                font-size: 24px;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .container {
+                flex-direction: row;
+                height: 100vh;
+            }
+            .canvas-wrapper {
+                height: 100%;
+                flex: 1;
+            }
+            .frame {
+                width: 50%;
+                height: 100%;
+                margin-top: 0;
+            }
+            .show-area {
+                font-size: 5em;
+                min-height: 80px;
+            }
+        }
+
+        @media (min-height: 900px) and (max-width: 1024px) {
+            .show-area {
+                min-height: 180px;
+                font-size: 9em;
+            }
+            .grid {
+                max-width: 480px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="container" role="main">
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas" width="1000" height="600" aria-label="Анимация воздушных шаров"></canvas>
+            <div class="hint-text">🎈 Нажимай на шарики — они будут лопаться!</div>
+        </div>
+
+        <section class="frame" aria-label="Игровое поле">
+
+            <article class="exercise active" data-exercise="1" role="region" aria-label="Упражнение 1">
+                <h1 class="exercise-title">Учимся запоминать</h1>
+                <p class="instruction" role="note">
+                    На экране по очереди будут появляться разные картинки.<br>
+                    Тебе надо их запомнить и отметить в квадратиках<br>
+                    только те картинки, которые появлялись на экране.
+                </p>
+                <div class="progress-indicator" aria-live="polite">Упражнение 1 из 4</div>
+                <figure class="show-area" aria-live="polite" aria-label="Область показа картинок"></figure>
+                <div class="grid" role="grid" aria-label="Сетка для выбора"></div>
+                <output class="result" aria-live="polite"></output>
+                <nav class="controls" aria-label="Управление упражнением">
+                    <button class="btn btn-check" type="button">Проверить</button>
+                    <button class="btn btn-next" type="button">Следующее упражнение</button>
+                </nav>
+            </article>
+
+            <article class="exercise" data-exercise="2" role="region" aria-label="Упражнение 2">
+                <h1 class="exercise-title">Учимся запоминать</h1>
+                <p class="instruction" role="note">
+                    На экране по очереди будут появляться разные картинки.<br>
+                    Тебе надо их запомнить и отметить в квадратиках<br>
+                    только те картинки, которые появлялись на экране.
+                </p>
+                <div class="progress-indicator" aria-live="polite">Упражнение 2 из 4</div>
+                <figure class="show-area" aria-live="polite" aria-label="Область показа картинок"></figure>
+                <div class="grid" role="grid" aria-label="Сетка для выбора"></div>
+                <output class="result" aria-live="polite"></output>
+                <nav class="controls" aria-label="Управление упражнением">
+                    <button class="btn btn-check" type="button">Проверить</button>
+                    <button class="btn btn-next" type="button">Следующее упражнение</button>
+                </nav>
+            </article>
+
+            <article class="exercise" data-exercise="3" role="region" aria-label="Упражнение 3">
+                <h1 class="exercise-title">Учимся запоминать</h1>
+                <p class="instruction" role="note">
+                    На экране по очереди будут появляться разные картинки.<br>
+                    Тебе надо их запомнить и отметить в квадратиках<br>
+                    только те картинки, которые появлялись на экране.
+                </p>
+                <div class="progress-indicator" aria-live="polite">Упражнение 3 из 4</div>
+                <figure class="show-area" aria-live="polite" aria-label="Область показа картинок"></figure>
+                <div class="grid" role="grid" aria-label="Сетка для выбора"></div>
+                <output class="result" aria-live="polite"></output>
+                <nav class="controls" aria-label="Управление упражнением">
+                    <button class="btn btn-check" type="button">Проверить</button>
+                    <button class="btn btn-next" type="button">Следующее упражнение</button>
+                </nav>
+            </article>
+
+            <article class="exercise" data-exercise="4" role="region" aria-label="Упражнение 4">
+                <h1 class="exercise-title">Учимся запоминать</h1>
+                <p class="instruction" role="note">
+                    На экране по очереди будут появляться разные картинки.<br>
+                    Тебе надо их запомнить и отметить в квадратиках<br>
+                    только те картинки, которые появлялись на экране.
+                </p>
+                <div class="progress-indicator" aria-live="polite">Упражнение 4 из 4</div>
+                <figure class="show-area" aria-live="polite" aria-label="Область показа картинок"></figure>
+                <div class="grid" role="grid" aria-label="Сетка для выбора"></div>
+                <output class="result" aria-live="polite"></output>
+                <nav class="controls" aria-label="Управление упражнением">
+                    <button class="btn btn-check" type="button">Проверить</button>
+                    <button class="btn btn-next" type="button">Завершить</button>
+                </nav>
+            </article>
+
+            <article class="exercise" data-exercise="final" role="region" aria-label="Поздравление">
+                <div class="final-screen">
+                    <canvas id="finalCanvas" aria-hidden="true"></canvas>
+                    <div class="final-content">
+                        <h1 class="final-title">Поздравляем!<br>Все упражнения<br>выполнены!</h1>
+                        <p class="final-subtitle" id="finalSubtitle">🎉 У тебя замечательная память! 🎉</p>
+                        <button class="btn-restart" type="button">Пройти ещё раз</button>
+                    </div>
+                </div>
+            </article>
+
+        </section>
+    </main>
+
+    <script>
+        // ========== АНИМАЦИЯ ВОЗДУШНЫХ ШАРОВ (оригинальный код без изменений) ==========
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = 1000;
+        const H = 600;
+
+        let time = 0;
+        let smoothTime = 0;
+        let lastFrameTime = performance.now();
+        let balloons = [];
+        let particles = [];
+        let poppedCount = 0;
+
+        const BALLOON_COLORS = [
+            { body: '#FF4D6D', highlight: '#FFB3C1', shadow: '#C9184A' },
+            { body: '#FFD60A', highlight: '#FFF3B0', shadow: '#E8A800' },
+            { body: '#06A77D', highlight: '#95F9D9', shadow: '#007F5F' },
+            { body: '#4361EE', highlight: '#A2D2FF', shadow: '#1E3A8A' },
+            { body: '#9D4EDD', highlight: '#DDA0FF', shadow: '#5A189A' },
+            { body: '#FF8500', highlight: '#FFD7A8', shadow: '#C75B00' },
+            { body: '#F72585', highlight: '#FFB3D9', shadow: '#B5179E' },
+            { body: '#4CC9F0', highlight: '#CAF0F8', shadow: '#0096C7' }
+        ];
+
+        const FLOWER_COLORS = ['#FF6B8A', '#FF9F43', '#F368E0', '#FFD93D', '#6BCB77', '#4FC3F7', '#FF8A80', '#FFB6C1', '#DDA0DD', '#FFA500'];
+
+        function createBalloon(x, y) {
+            const color = BALLOON_COLORS[Math.floor(Math.random() * BALLOON_COLORS.length)];
+            return {
+                x: x, y: y, baseX: x, baseY: y,
+                rx: 32 + Math.random() * 8, ry: 40 + Math.random() * 10,
+                color: color, phase: Math.random() * Math.PI * 2,
+                swaySpeed: 0.5 + Math.random() * 0.5,
+                swayAmount: 10 + Math.random() * 15,
+                riseSpeed: 0.35 + Math.random() * 0.4,
+                rotation: (Math.random() - 0.5) * 0.3,
+                alive: true, popping: false, popTime: 0,
+                startTime: smoothTime, fadeIn: 0
+            };
+        }
+
+        function initBalloons() {
+            balloons = [];
+            const positions = [
+                { x: 0.20 * W, y: 0.55 * H }, { x: 0.30 * W, y: 0.45 * H },
+                { x: 0.40 * W, y: 0.60 * H }, { x: 0.50 * W, y: 0.50 * H },
+                { x: 0.60 * W, y: 0.55 * H }, { x: 0.70 * W, y: 0.48 * H },
+                { x: 0.80 * W, y: 0.58 * H }, { x: 0.25 * W, y: 0.70 * H },
+                { x: 0.45 * W, y: 0.68 * H }, { x: 0.65 * W, y: 0.72 * H },
+                { x: 0.35 * W, y: 0.80 * H }, { x: 0.55 * W, y: 0.78 * H },
+                { x: 0.75 * W, y: 0.82 * H }
+            ];
+            positions.forEach(p => balloons.push(createBalloon(p.x, p.y)));
+        }
+
+        function drawSky() {
+            const grad = ctx.createLinearGradient(0, 0, 0, H * 0.75);
+            grad.addColorStop(0, '#87CEEB');
+            grad.addColorStop(0.5, '#B0E0E6');
+            grad.addColorStop(1, '#E0F6FF');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H * 0.75);
+        }
+
+        function drawSun() {
+            const cx = 260, cy = 80, r = 45;
+            for (let i = 0; i < 4; i++) {
+                const glowR = r + 20 + i * 14 + Math.sin(smoothTime * 0.5 + i) * 3;
+                const alpha = 0.22 - i * 0.045;
+                ctx.beginPath();
+                ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 240, 170, ${alpha})`;
+                ctx.fill();
+            }
+            ctx.save();
+            ctx.translate(cx, cy);
+            for (let i = 0; i < 14; i++) {
+                const angle = (i / 14) * Math.PI * 2 + smoothTime * 0.1;
+                const len = 60 + Math.sin(smoothTime * 0.4 + i * 1.3) * 6;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(angle) * (r + 4), Math.sin(angle) * (r + 4));
+                ctx.lineTo(Math.cos(angle) * len, Math.sin(angle) * len);
+                ctx.strokeStyle = 'rgba(255, 240, 170, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+            ctx.restore();
+            const grad = ctx.createRadialGradient(cx - 8, cy - 8, 6, cx, cy, r);
+            grad.addColorStop(0, '#FFFFF0');
+            grad.addColorStop(0.4, '#FFEE88');
+            grad.addColorStop(1, '#FFB703');
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawClouds() {
+            const clouds = [
+                { startX: 0.30 * W, y: 0.10 * H, s: 1.1, speed: 7 },
+                { startX: 0.55 * W, y: 0.06 * H, s: 0.85, speed: 5 },
+                { startX: 0.75 * W, y: 0.15 * H, s: 1.3, speed: 9 },
+                { startX: 0.95 * W, y: 0.08 * H, s: 0.75, speed: 6 }
+            ];
+            clouds.forEach((c, idx) => {
+                const totalPath = W + 300;
+                const cycleTime = totalPath / c.speed;
+                const phaseOffset = (idx * cycleTime / clouds.length);
+                const progress = ((smoothTime + phaseOffset) % cycleTime) / cycleTime;
+                const ox = -150 + progress * totalPath;
+                const oy = c.y + Math.sin(smoothTime * 0.3 + idx * 1.5) * 3;
+                const s = c.s;
+                ctx.save();
+                ctx.translate(ox, oy);
+                ctx.shadowColor = 'rgba(255,255,255,0.15)';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+                const r = 34 * s;
+                ctx.beginPath();
+                ctx.arc(0, 0, r, 0, Math.PI * 2);
+                ctx.arc(r * 0.85, -r * 0.3, r * 0.75, 0, Math.PI * 2);
+                ctx.arc(r * 1.7, 0, r * 0.65, 0, Math.PI * 2);
+                ctx.arc(r * 0.5, r * 0.2, r * 0.55, 0, Math.PI * 2);
+                ctx.arc(r * 1.35, r * 0.15, r * 0.55, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.restore();
+            });
+        }
+
+        function drawBirds() {
+            const birds = [
+                { x: 0.25 * W, y: 0.22 * H, size: 1.0, speed: 1.2, phase: 0 },
+                { x: 0.45 * W, y: 0.15 * H, size: 0.85, speed: 1.6, phase: 2 },
+                { x: 0.60 * W, y: 0.25 * H, size: 0.9, speed: 1.0, phase: 4 },
+                { x: 0.75 * W, y: 0.18 * H, size: 0.75, speed: 1.4, phase: 1 },
+                { x: 0.88 * W, y: 0.28 * H, size: 0.7, speed: 1.8, phase: 3 }
+            ];
+            birds.forEach((b, idx) => {
+                const x = (b.x + smoothTime * 2.5 * b.speed + idx * 200) % (W + 100) - 50;
+                const y = b.y + Math.sin(smoothTime * 0.2 + b.phase) * 15;
+                const s = b.size;
+                const wingAngle = Math.sin(smoothTime * 5 + b.phase) * 0.6 + 0.4;
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.fillStyle = 'rgba(0,0,0,0.05)';
+                ctx.beginPath();
+                ctx.ellipse(0, 12, 16 * s, 4 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#2C3E50';
+                ctx.shadowColor = 'rgba(0,0,0,0.1)';
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 16 * s, 7 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#34495E';
+                ctx.beginPath();
+                ctx.arc(14 * s, -2 * s, 6 * s, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(17 * s, -4 * s, 2.5 * s, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1A1A2E';
+                ctx.beginPath();
+                ctx.arc(18 * s, -4 * s, 1.2 * s, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#E67E22';
+                ctx.beginPath();
+                ctx.moveTo(20 * s, -1 * s);
+                ctx.lineTo(25 * s, 0 * s);
+                ctx.lineTo(20 * s, 2 * s);
+                ctx.closePath();
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                const wingY = Math.sin(wingAngle) * 10 * s;
+                ctx.fillStyle = '#2C3E50';
+                ctx.beginPath();
+                ctx.ellipse(-6 * s, -4 * s + wingY, 12 * s, 6 * s, -0.3 + wingAngle * 0.1, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#34495E';
+                ctx.beginPath();
+                ctx.ellipse(4 * s, -2 * s + wingY * 0.6, 8 * s, 4 * s, 0.2 + wingAngle * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#2C3E50';
+                ctx.beginPath();
+                ctx.moveTo(-14 * s, -2 * s);
+                ctx.lineTo(-22 * s, -6 * s + Math.sin(wingAngle * 0.5) * 3 * s);
+                ctx.lineTo(-20 * s, 2 * s);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function drawGround() {
+            const grad = ctx.createLinearGradient(0, 0.75 * H, 0, H);
+            grad.addColorStop(0, '#98D982');
+            grad.addColorStop(0.5, '#6BBF59');
+            grad.addColorStop(1, '#4A9A3F');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0.75 * H, W, 0.25 * H);
+            const groundFlowers = [];
+            for (let i = 0; i < 60; i++) {
+                groundFlowers.push({
+                    x: (i * 17 + 11) % W,
+                    y: 0.78 * H + ((i * 29 + 7) % (0.18 * H)),
+                    c: FLOWER_COLORS[i % FLOWER_COLORS.length],
+                    size: 5 + (i % 4),
+                    stemH: 14 + (i % 8)
+                });
+            }
+            groundFlowers.forEach((f, idx) => {
+                const sway = Math.sin(smoothTime * 0.6 + idx * 0.5) * 1.5;
+                ctx.strokeStyle = '#4A8C4A';
+                ctx.lineWidth = 1.8;
+                ctx.beginPath();
+                ctx.moveTo(f.x, f.y);
+                ctx.quadraticCurveTo(f.x + sway * 0.5, f.y - f.stemH * 0.5, f.x + sway, f.y - f.stemH);
+                ctx.stroke();
+                ctx.fillStyle = '#5DAE5D';
+                ctx.beginPath();
+                ctx.ellipse(f.x + sway * 0.3 - 3, f.y - f.stemH * 0.4, 3, 1.5, -0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(f.x + sway * 0.3 + 3, f.y - f.stemH * 0.6, 3, 1.5, 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                const flowerX = f.x + sway;
+                const flowerY = f.y - f.stemH;
+                const petals = 5;
+                for (let i = 0; i < petals; i++) {
+                    const angle = (i / petals) * Math.PI * 2 + idx * 0.2;
+                    const px = flowerX + Math.cos(angle) * f.size;
+                    const py = flowerY + Math.sin(angle) * f.size;
+                    ctx.beginPath();
+                    ctx.ellipse(px, py, f.size * 0.7, f.size * 0.5, angle, 0, Math.PI * 2);
+                    ctx.fillStyle = f.c;
+                    ctx.fill();
+                }
+                ctx.beginPath();
+                ctx.arc(flowerX, flowerY, f.size * 0.4, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFD93D';
+                ctx.fill();
+            });
+        }
+
+        function drawBalloon(b) {
+            if (!b.alive && !b.popping) return;
+            const sway = Math.sin(smoothTime * b.swaySpeed + b.phase) * b.swayAmount;
+            const rise = (smoothTime - b.startTime) * b.riseSpeed * 20;
+            let x = b.baseX + sway;
+            let y = b.baseY - rise;
+            const age = smoothTime - b.startTime;
+            b.fadeIn = Math.min(1, age / 1.0);
+            x = Math.max(b.rx + 15, Math.min(W - b.rx - 15, x));
+            y = Math.max(b.ry + 10, y);
+            b.x = x; b.y = y;
+            if (y <= b.ry + 12 && b.alive && !b.popping) {
+                popBalloon(balloons.indexOf(b));
+                return;
+            }
+            if (b.popping) return;
+            ctx.save();
+            ctx.globalAlpha = b.fadeIn;
+            ctx.translate(x, y);
+            ctx.rotate(Math.sin(smoothTime * b.swaySpeed + b.phase) * 0.08);
+            ctx.fillStyle = 'rgba(0,0,0,0.08)';
+            ctx.beginPath();
+            ctx.ellipse(4, 6, b.rx * 0.95, b.ry * 0.95, 0, 0, Math.PI * 2);
+            ctx.fill();
+            const bodyGrad = ctx.createRadialGradient(-b.rx * 0.3, -b.ry * 0.3, b.rx * 0.2, 0, 0, b.rx * 1.2);
+            bodyGrad.addColorStop(0, b.color.highlight);
+            bodyGrad.addColorStop(0.4, b.color.body);
+            bodyGrad.addColorStop(1, b.color.shadow);
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, b.rx, b.ry, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.beginPath();
+            ctx.ellipse(-b.rx * 0.35, -b.ry * 0.45, b.rx * 0.25, b.ry * 0.35, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = b.color.shadow;
+            ctx.beginPath();
+            ctx.moveTo(-4, b.ry - 2);
+            ctx.lineTo(4, b.ry - 2);
+            ctx.lineTo(0, b.ry + 6);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.save();
+            ctx.globalAlpha = b.fadeIn;
+            ctx.strokeStyle = 'rgba(120, 100, 80, 0.7)';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            const stringLen = 80;
+            ctx.moveTo(x, y + b.ry + 4);
+            ctx.bezierCurveTo(
+                x + Math.sin(smoothTime * b.swaySpeed + b.phase) * 8, y + b.ry + stringLen * 0.4,
+                x - Math.sin(smoothTime * b.swaySpeed + b.phase + 1) * 10, y + b.ry + stringLen * 0.7,
+                x + Math.sin(smoothTime * b.swaySpeed + b.phase + 2) * 5, y + b.ry + stringLen
+            );
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                ctx.beginPath();
+                if (p.shape === 'triangle') {
+                    ctx.moveTo(-p.size, -p.size);
+                    ctx.lineTo(p.size, -p.size);
+                    ctx.lineTo(0, p.size);
+                    ctx.closePath();
+                } else {
+                    ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+                }
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function popBalloon(index) {
+            if (index < 0 || index >= balloons.length) return;
+            const b = balloons[index];
+            if (!b.alive || b.popping) return;
+            b.popping = true; b.alive = false; poppedCount++;
+            const numParticles = 18 + Math.floor(Math.random() * 8);
+            for (let i = 0; i < numParticles; i++) {
+                const angle = (i / numParticles) * Math.PI * 2 + Math.random() * 0.5;
+                const speed = 2 + Math.random() * 4;
+                particles.push({
+                    x: b.x, y: b.y,
+                    vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 1,
+                    size: 3 + Math.random() * 4,
+                    color: Math.random() < 0.5 ? b.color.body : b.color.highlight,
+                    life: 1, decay: 0.02 + Math.random() * 0.02,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 0.3,
+                    shape: Math.random() < 0.5 ? 'triangle' : 'circle',
+                    gravity: 0.15
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.vy += p.gravity;
+                p.vx *= 0.98; p.rotation += p.rotSpeed;
+                p.life -= p.decay;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            drawSky(); drawSun(); drawClouds(); drawBirds(); drawGround();
+            balloons.forEach((b) => { if (b.alive || b.popping) drawBalloon(b); });
+            drawParticles();
+        }
+
+        function update() {
+            const now = performance.now();
+            const dt = (now - lastFrameTime) / 1000;
+            lastFrameTime = now;
+            smoothTime += dt; time++;
+            updateParticles();
+            for (let i = balloons.length - 1; i >= 0; i--) {
+                if (balloons[i].popping) balloons.splice(i, 1);
+            }
+            if (balloons.length < 12) {
+                const x = 0.20 * W + Math.random() * 0.6 * W;
+                const y = H + 80 + Math.random() * 60;
+                balloons.push(createBalloon(x, y));
+            }
+        }
+
+        function gameLoop() {
+            update(); draw(); requestAnimationFrame(gameLoop);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = W / rect.width;
+            const scaleY = H / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+            for (let i = balloons.length - 1; i >= 0; i--) {
+                const b = balloons[i];
+                if (!b.alive || b.popping) continue;
+                const sway = Math.sin(smoothTime * b.swaySpeed + b.phase) * b.swayAmount;
+                const rise = (smoothTime - b.startTime) * b.riseSpeed * 20;
+                let bx = b.baseX + sway;
+                let by = b.baseY - rise;
+                bx = Math.max(b.rx + 15, Math.min(W - b.rx - 15, bx));
+                by = Math.max(b.ry + 10, by);
+                const dx = mouseX - bx;
+                const dy = mouseY - by;
+                const dist = (dx * dx) / (b.rx * b.rx) + (dy * dy) / (b.ry * b.ry);
+                if (dist <= 1) { popBalloon(i); break; }
+            }
+        });
+
+        initBalloons();
+        gameLoop();
+
+        // ========== ЛОГИКА ИГРЫ ==========
+        const exercises = [
+            {
+                showEmojis: ['🌂', '🪥', '🎀', '🚀'],
+                gridSize: 4,
+                grid: [
+                    ['🏀', '🚀', '🚩', '🍎'],
+                    ['⛄', '👗', '👑', '🎀'],
+                    ['🪥', '👓', '🎒', '🚲'],
+                    ['🏠', '🌷', '🌂', '🔑']
+                ]
+            },
+            {
+                showEmojis: ['🐟', '🐳', '🦣', '🐓', '🍬'],
+                gridSize: 5,
+                grid: [
+                    ['📣', '🫖', '🍬', '🎷', '🪚'],
+                    ['🔔', '🦣', '🛩️', '🎾', '🛼'],
+                    ['🍄', '📺', '🐳', '🎈', '🛝'],
+                    ['⌚️', '🖋️', '🐞', '🐓', '🍐'],
+                    ['🐟', '🌳', '🚁', '🥖', '🛋️']
+                ]
+            },
+            {
+                showEmojis: ['🍄', '🧺', '📕', '❤️', '🥕', '🔦'],
+                gridSize: 6,
+                grid: [
+                    ['🪁', '🧸', '🎲', '🧺', '⚽', '🍄'],
+                    ['📕', '✂️', '🎖️', '🐌', '⏲️', '🌞'],
+                    ['🎁', '🕯️', '🧵', '🎨', '🦴', '🍞'],
+                    ['🦆', '🐤', '🦋', '🍕', '🧃', '❤️'],
+                    ['🐖', '🦈', '🥕', '🪵', '🍁', '🐏'],
+                    ['👖', '👟', '📦', '🔦', '🚜', '🧳']
+                ]
+            },
+            {
+                showEmojis: ['🐎', '🦉', '🐈', '🐀', '🐿️', '🦓', '🐒'],
+                gridSize: 6,
+                grid: [
+                    ['🎈', '🍎', '🐎', '🚗', '🌟', '🎁'],
+                    ['🎨', '🦉', '🎵', '🍕', '🌈', '🐈'],
+                    ['🎪', '🎯', '🐀', '🎲', '🧸', '🎸'],
+                    ['🎺', '🐿️', '🎻', '🥁', '🎹', '🦓'],
+                    ['🎤', '🎧', '🚀', '🐒', '🚁', '🚂'],
+                    ['🚢', '🛵', '🚲', '🛴', '🛹', '🛶']
+                ]
+            }
+        ];
+
+        let currentExercise = 0;
+        let phase = 'idle';
+        let selectedCells = new Set();
+        let showingTimer = null;
+
+        // Глобальный флаг: были ли ошибки хотя бы в одном упражнении за весь проход
+        let anyExerciseHadErrors = false;
+
+        const exerciseElements = document.querySelectorAll('.exercise');
+        const finalSubtitle = document.getElementById('finalSubtitle');
+
+        function getExerciseEl(idx) {
+            if (idx === 'final') return document.querySelector('[data-exercise="final"]');
+            return exerciseElements[idx];
+        }
+
+        function showExercise(idx) {
+            if (showingTimer) {
+                clearTimeout(showingTimer);
+                showingTimer = null;
+            }
+
+            exerciseElements.forEach(el => el.classList.remove('active'));
+            const el = getExerciseEl(idx);
+            el.classList.add('active');
+            currentExercise = idx;
+
+            if (idx === 'final') {
+                updateFinalMessage();
+                startFinalAnimation();
+                return;
+            }
+
+            selectedCells = new Set();
+            const exercise = exercises[idx];
+
+            const resultEl = el.querySelector('.result');
+            resultEl.textContent = '';
+            resultEl.className = 'result';
+
+            const gridEl = el.querySelector('.grid');
+            gridEl.innerHTML = '';
+            gridEl.style.gridTemplateColumns = `repeat(${exercise.gridSize}, 1fr)`;
+            gridEl.style.gridTemplateRows = `repeat(${exercise.gridSize}, 1fr)`;
+
+            for (let r = 0; r < exercise.gridSize; r++) {
+                for (let c = 0; c < exercise.gridSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.setAttribute('role', 'gridcell');
+                    cell.setAttribute('aria-label', `Ячейка ${r + 1}, ${c + 1}: ${exercise.grid[r][c]}`);
+                    cell.textContent = exercise.grid[r][c];
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    cell.addEventListener('click', () => toggleCell(cell, r, c));
+                    gridEl.appendChild(cell);
+                }
+            }
+
+            gridEl.style.display = 'none';
+            el.querySelector('.controls').style.display = 'none';
+            const showArea = el.querySelector('.show-area');
+            showArea.style.display = 'flex';
+            showArea.innerHTML = '';
+
+            phase = 'showing';
+
+            const initialDelay = (idx === 0) ? 7000 : 2000;
+            showingTimer = setTimeout(() => {
+                startShowing(el, exercise);
+            }, initialDelay);
+        }
+
+        function startShowing(el, exercise) {
+            const showArea = el.querySelector('.show-area');
+            const emojis = exercise.showEmojis;
+            let i = 0;
+
+            function showNext() {
+                if (i >= emojis.length) {
+                    phase = 'grid';
+                    showArea.style.display = 'none';
+                    showArea.innerHTML = '';
+                    setTimeout(() => {
+                        el.querySelector('.grid').style.display = 'grid';
+                        el.querySelector('.controls').style.display = 'flex';
+                    }, 300);
+                    return;
+                }
+                showArea.style.display = 'flex';
+                showArea.innerHTML = `<span class="emoji-display">${emojis[i]}</span>`;
+                i++;
+                showingTimer = setTimeout(showNext, 3000);
+            }
+            showNext();
+        }
+
+        function toggleCell(cell, r, c) {
+            if (phase !== 'grid') return;
+            const key = `${r}-${c}`;
+            if (selectedCells.has(key)) {
+                selectedCells.delete(key);
+                cell.classList.remove('selected');
+                cell.setAttribute('aria-pressed', 'false');
+            } else {
+                selectedCells.add(key);
+                cell.classList.add('selected');
+                cell.setAttribute('aria-pressed', 'true');
+            }
+        }
+
+        function checkAnswer() {
+            if (phase !== 'grid') return;
+            phase = 'result';
+
+            const exercise = exercises[currentExercise];
+            const el = getExerciseEl(currentExercise);
+            const resultEl = el.querySelector('.result');
+
+            const emojiCountInShow = {};
+            exercise.showEmojis.forEach(e => {
+                emojiCountInShow[e] = (emojiCountInShow[e] || 0) + 1;
+            });
+
+            const emojiCountInGrid = {};
+            const finalCorrect = new Set();
+            for (let r = 0; r < exercise.gridSize; r++) {
+                for (let c = 0; c < exercise.gridSize; c++) {
+                    const emoji = exercise.grid[r][c];
+                    if (emojiCountInShow[emoji] !== undefined) {
+                        emojiCountInGrid[emoji] = (emojiCountInGrid[emoji] || 0) + 1;
+                        if (emojiCountInGrid[emoji] <= emojiCountInShow[emoji]) {
+                            finalCorrect.add(`${r}-${c}`);
+                        }
+                    }
+                }
+            }
+
+            let errors = 0;
+            selectedCells.forEach(key => {
+                if (!finalCorrect.has(key)) errors++;
+            });
+            finalCorrect.forEach(key => {
+                if (!selectedCells.has(key)) errors++;
+            });
+
+            if (errors === 0) {
+                resultEl.textContent = '🎉 Молодец! У тебя отличная память!';
+                resultEl.className = 'result success';
+                playWinSound();
+            } else {
+                resultEl.textContent = `Ошибок — ${errors}. Старайся запомнить!`;
+                resultEl.className = 'result error';
+                // Если в этом упражнении были ошибки — фиксируем это глобально
+                anyExerciseHadErrors = true;
+            }
+        }
+
+        // Обновление сообщения на финальной странице
+        function updateFinalMessage() {
+            if (anyExerciseHadErrors) {
+                finalSubtitle.textContent = 'Были ошибки. Не огорчайся! Потренируйся еще раз, чтобы память стала хорошей!';
+                finalSubtitle.className = 'final-subtitle error';
+            } else {
+                finalSubtitle.textContent = '🎉 Молодец! У тебя отличная память! 🎉';
+                finalSubtitle.className = 'final-subtitle success';
+            }
+        }
+
+        function nextExercise() {
+            if (currentExercise < exercises.length - 1) {
+                showExercise(currentExercise + 1);
+            } else {
+                showExercise('final');
+            }
+        }
+
+        exerciseElements.forEach((el) => {
+            const checkBtn = el.querySelector('.btn-check');
+            const nextBtn = el.querySelector('.btn-next');
+            if (checkBtn) checkBtn.addEventListener('click', checkAnswer);
+            if (nextBtn) nextBtn.addEventListener('click', nextExercise);
+        });
+
+        document.querySelector('.btn-restart').addEventListener('click', () => {
+            stopFinalAnimation();
+            // При перезапуске сбрасываем глобальный флаг ошибок
+            anyExerciseHadErrors = false;
+            showExercise(0);
+        });
+
+        // ========== ЗВУК ПОБЕДЫ ==========
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioCtx;
+        }
+
+        function playWinSound() {
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                const arpeggioNotes = [523.25, 659.25, 783.99, 1046.50];
+                arpeggioNotes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0, now + i * 0.15);
+                    gain.gain.linearRampToValueAtTime(0.3, now + i * 0.15 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.4);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + i * 0.15);
+                    osc.stop(now + i * 0.15 + 0.5);
+                });
+                const chordStart = now + 0.7;
+                const chordFreqs = [261.63, 329.63, 392.00, 523.25];
+                chordFreqs.forEach(freq => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0, chordStart);
+                    gain.gain.linearRampToValueAtTime(0.25, chordStart + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, chordStart + 1.5);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(chordStart);
+                    osc.stop(chordStart + 1.6);
+                });
+            } catch (e) {
+                console.warn('Не удалось воспроизвести звук:', e);
+            }
+        }
+
+        // ========== АНИМАЦИЯ ШАРИКОВ НА ФИНАЛЬНОМ ЭКРАНЕ ==========
+        const finalCanvas = document.getElementById('finalCanvas');
+        const fctx = finalCanvas.getContext('2d');
+        let finalBalls = [];
+        let finalAnimId = null;
+        let finalRunning = false;
+
+        const FINAL_BALL_COLORS = [
+            '#FF4D6D', '#FFD60A', '#06A77D', '#4361EE',
+            '#9D4EDD', '#FF8500', '#F72585', '#4CC9F0',
+            '#FF6B8A', '#6BCB77', '#FFA500', '#DDA0DD'
+        ];
+
+        function resizeFinalCanvas() {
+            const frame = document.querySelector('.frame');
+            const rect = frame.getBoundingClientRect();
+            finalCanvas.width = rect.width;
+            finalCanvas.height = rect.height;
+        }
+
+        function createFinalBall(startFromBottom = true) {
+            return {
+                x: Math.random() * finalCanvas.width,
+                y: startFromBottom ? finalCanvas.height + Math.random() * 80 : Math.random() * finalCanvas.height,
+                r: 8 + Math.random() * 14,
+                color: FINAL_BALL_COLORS[Math.floor(Math.random() * FINAL_BALL_COLORS.length)],
+                speed: 0.6 + Math.random() * 1.8,
+                swayPhase: Math.random() * Math.PI * 2,
+                swaySpeed: 0.8 + Math.random() * 1.2,
+                swayAmount: 8 + Math.random() * 18
+            };
+        }
+
+        function initFinalBalls() {
+            finalBalls = [];
+            const count = Math.max(20, Math.floor(finalCanvas.width / 20));
+            for (let i = 0; i < count; i++) {
+                finalBalls.push(createFinalBall(false));
+            }
+        }
+
+        function updateFinalBalls() {
+            for (let i = finalBalls.length - 1; i >= 0; i--) {
+                const b = finalBalls[i];
+                b.y -= b.speed;
+                b.swayPhase += 0.02;
+                if (b.y < -b.r * 2) {
+                    finalBalls.splice(i, 1);
+                    finalBalls.push(createFinalBall(true));
+                }
+            }
+        }
+
+        function drawFinalBalls() {
+            fctx.clearRect(0, 0, finalCanvas.width, finalCanvas.height);
+            finalBalls.forEach(b => {
+                const x = b.x + Math.sin(b.swayPhase * b.swaySpeed) * b.swayAmount;
+                fctx.fillStyle = 'rgba(0,0,0,0.1)';
+                fctx.beginPath();
+                fctx.arc(x + 2, b.y + 2, b.r, 0, Math.PI * 2);
+                fctx.fill();
+                const grad = fctx.createRadialGradient(
+                    x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.15,
+                    x, b.y, b.r
+                );
+                grad.addColorStop(0, '#FFFFFF');
+                grad.addColorStop(0.3, b.color);
+                grad.addColorStop(1, b.color);
+                fctx.fillStyle = grad;
+                fctx.beginPath();
+                fctx.arc(x, b.y, b.r, 0, Math.PI * 2);
+                fctx.fill();
+                fctx.fillStyle = 'rgba(255,255,255,0.6)';
+                fctx.beginPath();
+                fctx.ellipse(x - b.r * 0.35, b.y - b.r * 0.4, b.r * 0.25, b.r * 0.35, -0.4, 0, Math.PI * 2);
+                fctx.fill();
+            });
+        }
+
+        function finalLoop() {
+            if (!finalRunning) return;
+            updateFinalBalls();
+            drawFinalBalls();
+            finalAnimId = requestAnimationFrame(finalLoop);
+        }
+
+        function startFinalAnimation() {
+            resizeFinalCanvas();
+            initFinalBalls();
+            finalRunning = true;
+            finalLoop();
+        }
+
+        function stopFinalAnimation() {
+            finalRunning = false;
+            if (finalAnimId) cancelAnimationFrame(finalAnimId);
+            finalBalls = [];
+            fctx.clearRect(0, 0, finalCanvas.width, finalCanvas.height);
+        }
+
+        window.addEventListener('resize', () => {
+            if (finalRunning) {
+                resizeFinalCanvas();
+            }
+        });
+
+        showExercise(0);
+    </script>
+
+</body>
+</html>
